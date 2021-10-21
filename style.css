@@ -11,6 +11,14 @@ section {
     margin: auto;
 }
 
+#control-bar {
+    padding: 0 8px;
+}
+
+#notify-text {
+    text-align: center;
+}
+
 table {
     border-collapse: separate;
     border-spacing: 8px;
