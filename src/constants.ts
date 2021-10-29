@@ -1,0 +1,7 @@
+const VERTICAL_AMOUNT: number = 9;
+const HORIZON_AMOUNT: number = 16;
+const UNIQUE: number = 36;
+
+const PAIR_AMOUNT: number = (HORIZON_AMOUNT * VERTICAL_AMOUNT) / 2;
+
+export { VERTICAL_AMOUNT, HORIZON_AMOUNT, UNIQUE, PAIR_AMOUNT }
