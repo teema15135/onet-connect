@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css" />
-    <script type="module" src="scripts-com/controller.js"></script>
+    <script type="module" src="scripts/controller.js"></script>
     <title>Onet Connect</title>
 </head>
 <body>
@@ -14,8 +14,11 @@
             <button id="new-game-button">New game</button>
             <h1 id="notify-text"></h1>
         </div>
-        <div id="game-container">
-            <!-- Reserved for js to create table element -->
+        <div id="game-section">
+            <canvas id="game-overlay-canvas"></canvas>
+            <div id="game-container">
+                <!-- Reserved for js to create table element -->
+            </div>
         </div>
     </section>
 </body>

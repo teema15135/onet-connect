@@ -3,29 +3,33 @@ import {
   HORIZON_AMOUNT,
   UNIQUE,
   PAIR_AMOUNT,
+  TILE_SIZE,
+  TILE_SPACE,
+  REMOVE_DELAY_MILLIS,
 } from "./constants.js";
-
-import { notify, removeNotifyText } from './notifier.js'
+import {
+  StraightConnect,
+  ThreeStraightConnect,
+  TwoStraightConnect,
+} from "./model.js";
+import { notify, removeNotifyText } from "./notifier.js";
+import { clearLine, drawConnect } from "./overlay-controller.js";
+import { getElement } from "./tile-helper.js";
+import { querySelectorAllAsList } from "./utils.js";
+import {
+  isOneLineConnecting,
+  isPresent,
+  isThreeLineConnecting,
+  isTwoLineConnecting,
+  isValidMatched,
+} from "./validator.js";
 
 declare global {
   interface HTMLTableCellElement {
-    position: number[],
-    tileValue: number | null,
-    currentEventListener: () => void,
+    position: number[];
+    tileValue: number | null;
+    currentEventListener: () => void;
   }
-}
-
-class Joint {
-  position: number[] = [-1, -1]
-}
-
-function querySelectorAllAsList<Type extends Element>(selectorName: string): Type[] {
-  let result: Type[] = []
-  let nodeList = document.querySelectorAll<Type>(selectorName)
-  for (let i = 0; i < nodeList.length; i++) {
-    result.push(nodeList.item(i))
-  }
-  return result
 }
 
 function getList(): number[] {
@@ -63,7 +67,7 @@ function listToMatrix<T>(list: T[], elementsPerSubArray: number): T[][] {
 
 function createDisplayElement(number: number | null): HTMLParagraphElement {
   let p = document.createElement("p");
-  p.textContent = (number != null ? number.toString() : "");
+  p.textContent = number != null ? number.toString() : "";
   return p;
 }
 
@@ -90,8 +94,9 @@ function newTable(): HTMLTableElement {
 }
 
 function shuffle(): void {
-  let tdList: HTMLTableCellElement[] = querySelectorAllAsList<HTMLTableCellElement>("td")
-  
+  let tdList: HTMLTableCellElement[] =
+    querySelectorAllAsList<HTMLTableCellElement>("td");
+
   for (let i = tdList.length - 1; i > 0; i--) {
     let j = Math.floor(Math.random() * (i + 1));
     let temp = tdList[i];
@@ -100,10 +105,10 @@ function shuffle(): void {
   }
 
   document.querySelector("#game-container")!.innerHTML = "";
-  
+
   let table = document.createElement("table");
   let tbody = document.createElement("tbody");
-  
+
   let displayMatrix = listToMatrix(tdList, HORIZON_AMOUNT);
 
   for (let i = 0; i < VERTICAL_AMOUNT; i++) {
@@ -112,7 +117,7 @@ function shuffle(): void {
       let td = document.createElement("td");
       td.position = [j, i];
       td.tileValue = displayMatrix[i][j].tileValue;
-      if (displayMatrix[i][j].tileValue == null) td.className = "hide"
+      if (displayMatrix[i][j].tileValue == null) td.className = "hide";
       tr.appendChild(td);
     }
     tbody.appendChild(tr);
@@ -149,16 +154,6 @@ function getActive(): HTMLTableCellElement | null {
   return activePosition;
 }
 
-function getElement(x: number, y: number) {
-  if (x < 0 || x >= HORIZON_AMOUNT) return null;
-  if (y < 0 || y >= VERTICAL_AMOUNT) return null;
-  for (let i of querySelectorAllAsList<HTMLTableCellElement>('td')) {
-    if (i.position[0] == x && i.position[1] == y)
-      return i
-  }
-  return null;
-}
-
 function onClick(x: number, y: number) {
   if (!isPresent(x, y)) return;
   if (isFirstClick()) onSecondClick(x, y);
@@ -173,26 +168,39 @@ function onSecondClick(x: number, y: number) {
   let first = getActive();
   let second = getElement(x, y);
 
-  if (first == null || second == null) return
+  if (first == null || second == null) return;
 
   if (first == second) {
     first.className = "";
     return;
   }
 
-  if (isValidMatched(first, second)) {
-    onMatch(first, second!);
+  let validMatched = isValidMatched(first, second);
+  if (
+    validMatched instanceof StraightConnect ||
+    validMatched instanceof TwoStraightConnect ||
+    validMatched instanceof ThreeStraightConnect
+  ) {
+    onMatch(first, second!, validMatched);
   } else onNotMatch(first, second);
 }
 
-function onMatch(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  removeTile(first);
-  removeTile(second);
-  if (isNoMoreTile()) {
-    notify("You win!!", false)
-  } else {
-    shuffleUntilAnyMatch();
-  }
+function onMatch(
+  first: HTMLTableCellElement,
+  second: HTMLTableCellElement,
+  connection: StraightConnect | TwoStraightConnect | ThreeStraightConnect
+) {
+  drawConnect(connection);
+  setTimeout(() => {
+    removeTile(first);
+    removeTile(second);
+    clearLine();
+    if (isNoMoreTile()) {
+      notify("You win!!", false);
+    } else {
+      shuffleUntilAnyMatch();
+    }
+  }, REMOVE_DELAY_MILLIS);
 }
 
 function onNotMatch(first: HTMLTableCellElement, second: HTMLTableCellElement) {
@@ -206,121 +214,11 @@ function removeTile(element: HTMLTableCellElement) {
 }
 
 function isNoMoreTile() {
-  let tdList = querySelectorAllAsList<HTMLTableCellElement>("td")
+  let tdList = querySelectorAllAsList<HTMLTableCellElement>("td");
   for (let td of tdList) {
-    if (td.tileValue != null || !td.className.includes("hide")) return false
+    if (td.tileValue != null || !td.className.includes("hide")) return false;
   }
   return true;
-}
-
-function isValidMatched(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  if (!isPresent(first.position[0], first.position[1]) || !isPresent(second.position[0], second.position[1]))
-    return false
-  return (
-    isSameTileValue(first, second) &&
-    (isAdjacent(first, second) ||
-      isOneLineConnecting(first, second) ||
-      isTwoLineConnecting(first, second) ||
-      isThreeLineConnecting(first, second))
-  );
-}
-
-function isSameTileValue(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  return first.tileValue == second.tileValue;
-}
-
-function isAdjacent(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  if (first.position[0] == second.position[0])
-    return Math.abs(first.position[1] - second.position[1]) == 1;
-
-  if (first.position[1] == second.position[1])
-    return Math.abs(first.position[0] - second.position[0]) == 1;
-
-  return false;
-}
-
-function isOneLineConnecting(first: HTMLTableCellElement | Joint, second: HTMLTableCellElement | Joint, firstIsIncluded = false, secondIsIncluded = false) {
-  if (first.position[0] == second.position[0]) {
-    if (first.position[1] > second.position[1]) {
-      for (let i = second.position[1] + (secondIsIncluded ? 0 : 1); i < first.position[1] + (firstIsIncluded ? 1 : 0); i++)
-        if (isPresent(first.position[0], i)) return false;
-      return true;
-    }
-    if (first.position[1] < second.position[1]) {
-      for (let i = first.position[1] + (firstIsIncluded ? 0 : 1); i < second.position[1] + (secondIsIncluded ? 1 : 0); i++)
-        if (isPresent(first.position[0], i)) return false;
-      return true;
-    }
-  }
-
-  if (first.position[1] == second.position[1]) {
-    if (first.position[0] > second.position[0]) {
-      for (let i = second.position[0] + (secondIsIncluded ? 0 : 1); i < first.position[0] + (firstIsIncluded ? 1 : 0); i++)
-        if (isPresent(i, first.position[1])) return false;
-      return true;
-    }
-    if (first.position[0] < second.position[0]) {
-      for (let i = first.position[0] + (firstIsIncluded ? 0 : 1); i < second.position[0] + (secondIsIncluded ? 1 : 0); i++)
-        if (isPresent(i, first.position[1])) return false;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function isTwoLineConnecting(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  let firstJoint: Joint = {
-    position: [first.position[0], second.position[1]],
-  };
-  let secondJoint: Joint = {
-    position: [second.position[0], first.position[1]],
-  };
-
-  if (isPresent(firstJoint.position[0], firstJoint.position[1])) {
-    return (
-      isOneLineConnecting(secondJoint, first, true, false) &&
-      isOneLineConnecting(secondJoint, second, true, false)
-    );
-  }
-
-  if (isPresent(secondJoint.position[0], secondJoint.position[1])) {
-    return (
-      isOneLineConnecting(firstJoint, first, true, false) &&
-      isOneLineConnecting(firstJoint, second, true, false)
-    );
-  }
-
-  return (
-    (isOneLineConnecting(firstJoint, first, true, false) &&
-      isOneLineConnecting(firstJoint, second, true, false)) ||
-    (isOneLineConnecting(secondJoint, first, true, false) &&
-      isOneLineConnecting(secondJoint, second, true, false))
-  );
-}
-
-function isThreeLineConnecting(first: HTMLTableCellElement, second: HTMLTableCellElement) {
-  // Horizon 2 points
-  for (let i = -1; i <= VERTICAL_AMOUNT; i++) {
-    let firstJoint: Joint = { position: [first.position[0], i] }
-    let secondJoint: Joint = { position: [second.position[0], i]}
-    // first -> firstJoint -> secondJoint -> second
-    if (isOneLineConnecting(first, firstJoint, false, true) &&
-    isOneLineConnecting(firstJoint, secondJoint, true, true) &&
-    isOneLineConnecting(secondJoint, second, true, false)) return true
-  }
-
-  // Vertical 2 points
-  for (let i = -1; i <= HORIZON_AMOUNT; i++) {
-    let firstJoint: Joint = { position: [i, first.position[1]] }
-    let secondJoint: Joint = { position: [i, second.position[1]] }
-    // first -> firstJoint -> secondJoint -> second
-    if (isOneLineConnecting(first, firstJoint, false, true) &&
-    isOneLineConnecting(firstJoint, secondJoint, true, true) &&
-    isOneLineConnecting(secondJoint, second, true, false)) return true
-  }
-
-  return false;
 }
 
 function isFirstClick() {
@@ -331,30 +229,48 @@ function isFirstClick() {
   return anyActive;
 }
 
-function isPresent(x: number, y: number): boolean {
-  return getElement(x, y) != null && getElement(x, y)!.tileValue != null;
-}
-
 function isAnyMatched() {
   let tdList = querySelectorAllAsList<HTMLTableCellElement>("td");
   for (let i of tdList) {
     for (let j of tdList) {
-      if (isValidMatched(i, j))
-        return true;
+      if (isValidMatched(i, j)) return true;
     }
   }
   return false;
 }
 
 function shuffleUntilAnyMatch() {
-  while(!isAnyMatched()) shuffle();
+  while (!isAnyMatched()) shuffle();
   displayAllCell();
   attachEventListenerAllCell();
 }
 
 function newGame() {
-  document.querySelector("#game-container")!.innerHTML = "";
-  document.querySelector("#game-container")!.appendChild(newTable());
+  let gameContainer =
+    document.querySelector<HTMLDivElement>("#game-container")!;
+  gameContainer.innerHTML = "";
+  gameContainer.appendChild(newTable());
+
+  gameContainer.style.width = `${
+    HORIZON_AMOUNT * (TILE_SIZE + TILE_SPACE) + TILE_SPACE
+  }px`;
+  gameContainer.style.height = `${
+    VERTICAL_AMOUNT * (TILE_SIZE + TILE_SPACE) + TILE_SPACE
+  }px`;
+
+  let gameOverlayCanvas = document.querySelector<HTMLCanvasElement>(
+    "#game-overlay-canvas"
+  )!;
+
+  gameOverlayCanvas.style.width = `${
+    (HORIZON_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE)
+  }px`;
+  gameOverlayCanvas.style.height = `${
+    (VERTICAL_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE)
+  }px`;
+  gameOverlayCanvas.width = (HORIZON_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE);
+  gameOverlayCanvas.height = (VERTICAL_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE);
+
   shuffleUntilAnyMatch();
   removeNotifyText();
 }
@@ -368,34 +284,38 @@ function main() {
 
 declare global {
   interface Window {
-    getList: any,
-    getElement: any,
-    isPresent: any,
-    isOneLineConnecting: any,
-    isTwoLineConnecting: any,
-    isThreeLineConnecting: any,
-    removeTile: any,
-    isNoMoreTile: any,
-    shuffleUntilAnyMatch: any,
-    shuffle: any,
-    displayAllCell: any,
-    attachEventListenerAllCell: any,
+    getList: any;
+    getElement: any;
+    isPresent: any;
+    isOneLineConnecting: any;
+    isTwoLineConnecting: any;
+    isThreeLineConnecting: any;
+    removeTile: any;
+    isNoMoreTile: any;
+    shuffleUntilAnyMatch: any;
+    shuffle: any;
+    displayAllCell: any;
+    attachEventListenerAllCell: any;
+    drawConnect: any;
+    clearLine: any;
   }
 }
 
 function debug() {
   window.getList = getList;
-  window.getElement = getElement
-  window.isPresent = isPresent
-  window.isOneLineConnecting = isOneLineConnecting
-  window.isTwoLineConnecting = isTwoLineConnecting
-  window.isThreeLineConnecting = isThreeLineConnecting
-  window.removeTile = removeTile
-  window.isNoMoreTile = isNoMoreTile
-  window.shuffleUntilAnyMatch = shuffleUntilAnyMatch
-  window.shuffle = shuffle
-  window.displayAllCell = displayAllCell
-  window.attachEventListenerAllCell = attachEventListenerAllCell
+  window.getElement = getElement;
+  window.isPresent = isPresent;
+  window.isOneLineConnecting = isOneLineConnecting;
+  window.isTwoLineConnecting = isTwoLineConnecting;
+  window.isThreeLineConnecting = isThreeLineConnecting;
+  window.removeTile = removeTile;
+  window.isNoMoreTile = isNoMoreTile;
+  window.shuffleUntilAnyMatch = shuffleUntilAnyMatch;
+  window.shuffle = shuffle;
+  window.displayAllCell = displayAllCell;
+  window.attachEventListenerAllCell = attachEventListenerAllCell;
+  window.drawConnect = drawConnect;
+  window.clearLine = clearLine;
 }
 
 main();

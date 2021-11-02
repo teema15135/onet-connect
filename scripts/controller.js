@@ -1,18 +1,10 @@
-import { VERTICAL_AMOUNT, HORIZON_AMOUNT, UNIQUE, PAIR_AMOUNT, } from "./constants.js";
-import { notify, removeNotifyText } from './notifier.js';
-class Joint {
-    constructor() {
-        this.position = [-1, -1];
-    }
-}
-function querySelectorAllAsList(selectorName) {
-    let result = [];
-    let nodeList = document.querySelectorAll(selectorName);
-    for (let i = 0; i < nodeList.length; i++) {
-        result.push(nodeList.item(i));
-    }
-    return result;
-}
+import { VERTICAL_AMOUNT, HORIZON_AMOUNT, UNIQUE, PAIR_AMOUNT, TILE_SIZE, TILE_SPACE, REMOVE_DELAY_MILLIS, } from "./constants.js";
+import { StraightConnect, ThreeStraightConnect, TwoStraightConnect, } from "./model.js";
+import { notify, removeNotifyText } from "./notifier.js";
+import { clearLine, drawConnect } from "./overlay-controller.js";
+import { getElement } from "./tile-helper.js";
+import { querySelectorAllAsList } from "./utils.js";
+import { isOneLineConnecting, isPresent, isThreeLineConnecting, isTwoLineConnecting, isValidMatched, } from "./validator.js";
 function getList() {
     let result = [];
     for (let i = 0; i < PAIR_AMOUNT; i++) {
@@ -40,7 +32,7 @@ function listToMatrix(list, elementsPerSubArray) {
 }
 function createDisplayElement(number) {
     let p = document.createElement("p");
-    p.textContent = (number != null ? number.toString() : "");
+    p.textContent = number != null ? number.toString() : "";
     return p;
 }
 function newTable() {
@@ -111,17 +103,6 @@ function getActive() {
     });
     return activePosition;
 }
-function getElement(x, y) {
-    if (x < 0 || x >= HORIZON_AMOUNT)
-        return null;
-    if (y < 0 || y >= VERTICAL_AMOUNT)
-        return null;
-    for (let i of querySelectorAllAsList('td')) {
-        if (i.position[0] == x && i.position[1] == y)
-            return i;
-    }
-    return null;
-}
 function onClick(x, y) {
     if (!isPresent(x, y))
         return;
@@ -142,21 +123,28 @@ function onSecondClick(x, y) {
         first.className = "";
         return;
     }
-    if (isValidMatched(first, second)) {
-        onMatch(first, second);
+    let validMatched = isValidMatched(first, second);
+    if (validMatched instanceof StraightConnect ||
+        validMatched instanceof TwoStraightConnect ||
+        validMatched instanceof ThreeStraightConnect) {
+        onMatch(first, second, validMatched);
     }
     else
         onNotMatch(first, second);
 }
-function onMatch(first, second) {
-    removeTile(first);
-    removeTile(second);
-    if (isNoMoreTile()) {
-        notify("You win!!", false);
-    }
-    else {
-        shuffleUntilAnyMatch();
-    }
+function onMatch(first, second, connection) {
+    drawConnect(connection);
+    setTimeout(() => {
+        removeTile(first);
+        removeTile(second);
+        clearLine();
+        if (isNoMoreTile()) {
+            notify("You win!!", false);
+        }
+        else {
+            shuffleUntilAnyMatch();
+        }
+    }, REMOVE_DELAY_MILLIS);
 }
 function onNotMatch(first, second) {
     first.className = "";
@@ -174,99 +162,6 @@ function isNoMoreTile() {
     }
     return true;
 }
-function isValidMatched(first, second) {
-    if (!isPresent(first.position[0], first.position[1]) || !isPresent(second.position[0], second.position[1]))
-        return false;
-    return (isSameTileValue(first, second) &&
-        (isAdjacent(first, second) ||
-            isOneLineConnecting(first, second) ||
-            isTwoLineConnecting(first, second) ||
-            isThreeLineConnecting(first, second)));
-}
-function isSameTileValue(first, second) {
-    return first.tileValue == second.tileValue;
-}
-function isAdjacent(first, second) {
-    if (first.position[0] == second.position[0])
-        return Math.abs(first.position[1] - second.position[1]) == 1;
-    if (first.position[1] == second.position[1])
-        return Math.abs(first.position[0] - second.position[0]) == 1;
-    return false;
-}
-function isOneLineConnecting(first, second, firstIsIncluded = false, secondIsIncluded = false) {
-    if (first.position[0] == second.position[0]) {
-        if (first.position[1] > second.position[1]) {
-            for (let i = second.position[1] + (secondIsIncluded ? 0 : 1); i < first.position[1] + (firstIsIncluded ? 1 : 0); i++)
-                if (isPresent(first.position[0], i))
-                    return false;
-            return true;
-        }
-        if (first.position[1] < second.position[1]) {
-            for (let i = first.position[1] + (firstIsIncluded ? 0 : 1); i < second.position[1] + (secondIsIncluded ? 1 : 0); i++)
-                if (isPresent(first.position[0], i))
-                    return false;
-            return true;
-        }
-    }
-    if (first.position[1] == second.position[1]) {
-        if (first.position[0] > second.position[0]) {
-            for (let i = second.position[0] + (secondIsIncluded ? 0 : 1); i < first.position[0] + (firstIsIncluded ? 1 : 0); i++)
-                if (isPresent(i, first.position[1]))
-                    return false;
-            return true;
-        }
-        if (first.position[0] < second.position[0]) {
-            for (let i = first.position[0] + (firstIsIncluded ? 0 : 1); i < second.position[0] + (secondIsIncluded ? 1 : 0); i++)
-                if (isPresent(i, first.position[1]))
-                    return false;
-            return true;
-        }
-    }
-    return false;
-}
-function isTwoLineConnecting(first, second) {
-    let firstJoint = {
-        position: [first.position[0], second.position[1]],
-    };
-    let secondJoint = {
-        position: [second.position[0], first.position[1]],
-    };
-    if (isPresent(firstJoint.position[0], firstJoint.position[1])) {
-        return (isOneLineConnecting(secondJoint, first, true, false) &&
-            isOneLineConnecting(secondJoint, second, true, false));
-    }
-    if (isPresent(secondJoint.position[0], secondJoint.position[1])) {
-        return (isOneLineConnecting(firstJoint, first, true, false) &&
-            isOneLineConnecting(firstJoint, second, true, false));
-    }
-    return ((isOneLineConnecting(firstJoint, first, true, false) &&
-        isOneLineConnecting(firstJoint, second, true, false)) ||
-        (isOneLineConnecting(secondJoint, first, true, false) &&
-            isOneLineConnecting(secondJoint, second, true, false)));
-}
-function isThreeLineConnecting(first, second) {
-    // Horizon 2 points
-    for (let i = -1; i <= VERTICAL_AMOUNT; i++) {
-        let firstJoint = { position: [first.position[0], i] };
-        let secondJoint = { position: [second.position[0], i] };
-        // first -> firstJoint -> secondJoint -> second
-        if (isOneLineConnecting(first, firstJoint, false, true) &&
-            isOneLineConnecting(firstJoint, secondJoint, true, true) &&
-            isOneLineConnecting(secondJoint, second, true, false))
-            return true;
-    }
-    // Vertical 2 points
-    for (let i = -1; i <= HORIZON_AMOUNT; i++) {
-        let firstJoint = { position: [i, first.position[1]] };
-        let secondJoint = { position: [i, second.position[1]] };
-        // first -> firstJoint -> secondJoint -> second
-        if (isOneLineConnecting(first, firstJoint, false, true) &&
-            isOneLineConnecting(firstJoint, secondJoint, true, true) &&
-            isOneLineConnecting(secondJoint, second, true, false))
-            return true;
-    }
-    return false;
-}
 function isFirstClick() {
     let anyActive = false;
     document.querySelectorAll("td").forEach((value) => {
@@ -274,9 +169,6 @@ function isFirstClick() {
             anyActive = true;
     });
     return anyActive;
-}
-function isPresent(x, y) {
-    return getElement(x, y) != null && getElement(x, y).tileValue != null;
 }
 function isAnyMatched() {
     let tdList = querySelectorAllAsList("td");
@@ -295,8 +187,16 @@ function shuffleUntilAnyMatch() {
     attachEventListenerAllCell();
 }
 function newGame() {
-    document.querySelector("#game-container").innerHTML = "";
-    document.querySelector("#game-container").appendChild(newTable());
+    let gameContainer = document.querySelector("#game-container");
+    gameContainer.innerHTML = "";
+    gameContainer.appendChild(newTable());
+    gameContainer.style.width = `${HORIZON_AMOUNT * (TILE_SIZE + TILE_SPACE) + TILE_SPACE}px`;
+    gameContainer.style.height = `${VERTICAL_AMOUNT * (TILE_SIZE + TILE_SPACE) + TILE_SPACE}px`;
+    let gameOverlayCanvas = document.querySelector("#game-overlay-canvas");
+    gameOverlayCanvas.style.width = `${(HORIZON_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE)}px`;
+    gameOverlayCanvas.style.height = `${(VERTICAL_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE)}px`;
+    gameOverlayCanvas.width = (HORIZON_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE);
+    gameOverlayCanvas.height = (VERTICAL_AMOUNT + 2) * (TILE_SIZE + TILE_SPACE);
     shuffleUntilAnyMatch();
     removeNotifyText();
 }
@@ -319,6 +219,8 @@ function debug() {
     window.shuffle = shuffle;
     window.displayAllCell = displayAllCell;
     window.attachEventListenerAllCell = attachEventListenerAllCell;
+    window.drawConnect = drawConnect;
+    window.clearLine = clearLine;
 }
 main();
 debug();

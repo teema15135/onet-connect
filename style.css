@@ -15,6 +15,22 @@ section {
     padding: 0 8px;
 }
 
+#game-section {
+    margin-top: 96px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#game-overlay-canvas {
+    position: absolute;
+    pointer-events: none;
+}
+
+#game-container {
+    margin: auto;
+}
+
 #notify-text {
     text-align: center;
 }
