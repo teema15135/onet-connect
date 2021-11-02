@@ -1,0 +1,25 @@
+{
+  "name": "onet-connect",
+  "version": "1.0.0",
+  "description": "npm install -g typescript",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "tsc-watch --onSuccess \"node ./server.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teema15135/onet-connect.git"
+  },
+  "author": "Teema Luksameset",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/teema15135/onet-connect/issues"
+  },
+  "homepage": "https://github.com/teema15135/onet-connect#readme",
+  "devDependencies": {
+    "express": "^4.17.1",
+    "tsc-watch": "^4.5.0"
+  }
+}

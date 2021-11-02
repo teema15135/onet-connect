@@ -1,3 +1,1 @@
-npm install -g typescript
-
-tsc
+npm install --include=dev
