@@ -200,6 +200,7 @@ function onMatch(
     clearLine();
     if (isNoMoreTile()) {
       notify("You win!!", false);
+      displayAllCell();
     } else {
       shuffleUntilAnyMatch();
     }
@@ -214,6 +215,7 @@ function onNotMatch(first: HTMLTableCellElement, second: HTMLTableCellElement) {
 function removeTile(element: HTMLTableCellElement) {
   element.className = "hide";
   element.tileValue = null;
+  console.log(element)
 }
 
 function isNoMoreTile() {

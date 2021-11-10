@@ -144,6 +144,7 @@ function onMatch(first, second, connection) {
         clearLine();
         if (isNoMoreTile()) {
             notify("You win!!", false);
+            displayAllCell();
         }
         else {
             shuffleUntilAnyMatch();
@@ -157,6 +158,7 @@ function onNotMatch(first, second) {
 function removeTile(element) {
     element.className = "hide";
     element.tileValue = null;
+    console.log(element);
 }
 function isNoMoreTile() {
     let tdList = querySelectorAllAsList("td");
