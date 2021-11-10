@@ -65,10 +65,13 @@ function listToMatrix<T>(list: T[], elementsPerSubArray: number): T[][] {
   return matrix;
 }
 
-function createDisplayElement(number: number | null): HTMLParagraphElement {
-  let p = document.createElement("p");
-  p.textContent = number != null ? number.toString() : "";
-  return p;
+function createDisplayElement(num: number | null): HTMLImageElement {
+  let img = document.createElement("img");
+  if (num == null) return img;
+  img.src = `images/${num}.png`;
+  img.className = "tile-image"
+  img.draggable = false
+  return img;
 }
 
 function newTable(): HTMLTableElement {

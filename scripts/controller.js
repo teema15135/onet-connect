@@ -30,10 +30,14 @@ function listToMatrix(list, elementsPerSubArray) {
     }
     return matrix;
 }
-function createDisplayElement(number) {
-    let p = document.createElement("p");
-    p.textContent = number != null ? number.toString() : "";
-    return p;
+function createDisplayElement(num) {
+    let img = document.createElement("img");
+    if (num == null)
+        return img;
+    img.src = `images/${num}.png`;
+    img.className = "tile-image";
+    img.draggable = false;
+    return img;
 }
 function newTable() {
     let table = document.createElement("table");
