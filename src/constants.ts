@@ -2,8 +2,9 @@ const VERTICAL_AMOUNT: number = 9;
 const HORIZON_AMOUNT: number = 16;
 const UNIQUE: number = 43;
 
-const TILE_SIZE = 48;
+const TILE_SIZE = 80;
 const TILE_SPACE = 8;
+const TILE_IMAGE_SIZE = 72;
 
 const REMOVE_DELAY_MILLIS = 200;
 
@@ -15,6 +16,7 @@ export {
   UNIQUE,
   PAIR_AMOUNT,
   TILE_SIZE,
+  TILE_IMAGE_SIZE,
   TILE_SPACE,
   REMOVE_DELAY_MILLIS,
 };

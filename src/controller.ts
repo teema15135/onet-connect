@@ -23,6 +23,7 @@ import {
   isTwoLineConnecting,
   isValidMatched,
 } from "./validator.js";
+import { createDisplayElement, newTableCellElement, newTableElement } from "./html-helper.js"
 
 declare global {
   interface HTMLTableCellElement {
@@ -65,17 +66,8 @@ function listToMatrix<T>(list: T[], elementsPerSubArray: number): T[][] {
   return matrix;
 }
 
-function createDisplayElement(num: number | null): HTMLImageElement {
-  let img = document.createElement("img");
-  if (num == null) return img;
-  img.src = `images/${num}.png`;
-  img.className = "tile-image"
-  img.draggable = false
-  return img;
-}
-
 function newTable(): HTMLTableElement {
-  let table = document.createElement("table");
+  let table = newTableElement();
   let tbody = document.createElement("tbody");
 
   let displayMatrix = listToMatrix(getList(), HORIZON_AMOUNT);
@@ -83,7 +75,7 @@ function newTable(): HTMLTableElement {
   for (let i = 0; i < VERTICAL_AMOUNT; i++) {
     let tr = document.createElement("tr");
     for (let j = 0; j < HORIZON_AMOUNT; j++) {
-      let td = document.createElement("td");
+      let td = newTableCellElement();
       td.position = [j, i];
       td.tileValue = displayMatrix[i][j];
       tr.appendChild(td);
@@ -109,7 +101,7 @@ function shuffle(): void {
 
   document.querySelector("#game-container")!.innerHTML = "";
 
-  let table = document.createElement("table");
+  let table = newTableElement();
   let tbody = document.createElement("tbody");
 
   let displayMatrix = listToMatrix(tdList, HORIZON_AMOUNT);
@@ -117,7 +109,7 @@ function shuffle(): void {
   for (let i = 0; i < VERTICAL_AMOUNT; i++) {
     let tr = document.createElement("tr");
     for (let j = 0; j < HORIZON_AMOUNT; j++) {
-      let td = document.createElement("td");
+      let td = newTableCellElement();
       td.position = [j, i];
       td.tileValue = displayMatrix[i][j].tileValue;
       if (displayMatrix[i][j].tileValue == null) td.className = "hide";

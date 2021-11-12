@@ -5,6 +5,7 @@ import { clearLine, drawConnect } from "./overlay-controller.js";
 import { getElement } from "./tile-helper.js";
 import { querySelectorAllAsList } from "./utils.js";
 import { isOneLineConnecting, isPresent, isThreeLineConnecting, isTwoLineConnecting, isValidMatched, } from "./validator.js";
+import { createDisplayElement, newTableCellElement, newTableElement } from "./html-helper.js";
 function getList() {
     let result = [];
     for (let i = 0; i < PAIR_AMOUNT; i++) {
@@ -30,23 +31,14 @@ function listToMatrix(list, elementsPerSubArray) {
     }
     return matrix;
 }
-function createDisplayElement(num) {
-    let img = document.createElement("img");
-    if (num == null)
-        return img;
-    img.src = `images/${num}.png`;
-    img.className = "tile-image";
-    img.draggable = false;
-    return img;
-}
 function newTable() {
-    let table = document.createElement("table");
+    let table = newTableElement();
     let tbody = document.createElement("tbody");
     let displayMatrix = listToMatrix(getList(), HORIZON_AMOUNT);
     for (let i = 0; i < VERTICAL_AMOUNT; i++) {
         let tr = document.createElement("tr");
         for (let j = 0; j < HORIZON_AMOUNT; j++) {
-            let td = document.createElement("td");
+            let td = newTableCellElement();
             td.position = [j, i];
             td.tileValue = displayMatrix[i][j];
             tr.appendChild(td);
@@ -65,13 +57,13 @@ function shuffle() {
         tdList[j] = temp;
     }
     document.querySelector("#game-container").innerHTML = "";
-    let table = document.createElement("table");
+    let table = newTableElement();
     let tbody = document.createElement("tbody");
     let displayMatrix = listToMatrix(tdList, HORIZON_AMOUNT);
     for (let i = 0; i < VERTICAL_AMOUNT; i++) {
         let tr = document.createElement("tr");
         for (let j = 0; j < HORIZON_AMOUNT; j++) {
-            let td = document.createElement("td");
+            let td = newTableCellElement();
             td.position = [j, i];
             td.tileValue = displayMatrix[i][j].tileValue;
             if (displayMatrix[i][j].tileValue == null)
