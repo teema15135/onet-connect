@@ -1,5 +1,5 @@
-const VERTICAL_AMOUNT: number = 4;
-const HORIZON_AMOUNT: number = 4;
+const VERTICAL_AMOUNT: number = 9;
+const HORIZON_AMOUNT: number = 16;
 const UNIQUE: number = 43;
 
 const TILE_SIZE = 48;
