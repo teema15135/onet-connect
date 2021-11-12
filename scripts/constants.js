@@ -1,5 +1,5 @@
-const VERTICAL_AMOUNT = 4;
-const HORIZON_AMOUNT = 4;
+const VERTICAL_AMOUNT = 9;
+const HORIZON_AMOUNT = 16;
 const UNIQUE = 43;
 const TILE_SIZE = 48;
 const TILE_SPACE = 8;
